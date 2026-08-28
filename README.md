@@ -97,19 +97,11 @@ Mumbai-Metro-Route-Guide-App/
 The standout feature is the custom **graph-based shortest-path finder** in [`RouteService.cs`](MyWebApp/Application/Services/RouteService.cs).
 
 **How it works:**
-1. All stations are loaded from MySQL with their `PreviousStationId` and `NextStationId` links
-2. An **adjacency list graph** is built in-memory from those links (bidirectional)
-3. **Breadth-First Search (BFS)** finds the shortest hop-count path between any two stations — including cross-line interchange paths
-4. Fare, travel time, stop count, and interchange stop count are fetched from the pre-computed `route_stations` lookup table
-5. The ordered station list is returned to the view for step-by-step route rendering
-
-```csharp
-// RouteService.cs — BFS core
-var queue = new Queue<uint>();
-var visited = new HashSet<uint>();
-var parent = new Dictionary<uint, uint?>();
-// ... BFS traversal across all metro lines ...
-```
+1. All stations are loaded from MySQL with their `PreviousStationId` / `NextStationId` links
+2. A bidirectional **adjacency list graph** is built in-memory
+3. **BFS** finds the minimum-hop path across any line interchange
+4. Fare, time, stop count, and interchange stops are fetched from the pre-computed `route_stations` table
+5. The ordered station list is returned to the Razor view for step-by-step rendering
 
 ---
 
@@ -123,7 +115,6 @@ var parent = new Dictionary<uint, uint?>();
 
 ### Booking Service
 - **6-digit OTP via Gmail SMTP** — Generated server-side, emailed, and verified before any ticket is issued
-- OTP is held in controller instance memory per request (stateless session)
 
 ---
 
@@ -489,19 +480,6 @@ npm start
 | Cookie auth over JWT for MVC | Server-rendered Razor views work naturally with cookie sessions; no need for token management in JavaScript |
 | Soft `[AllowAnonymous]` on public controllers | Public pages (Journey Planner, Train Schedule) remain accessible without login while admin routes remain protected |
 | DTOs separate from entities | Entities never leave the infrastructure layer; controllers and views always receive purpose-built DTOs / ViewModels |
-
----
-
-## ⚠️ Known Issues & Improvement Notes
-
-| # | Issue | Location | Suggestion |
-|---|---|---|---|
-| 1 | **OTP stored as instance field** — in a multi-user or load-balanced environment, `lastGeneratedOTP` in `EmailController` is shared state, causing race conditions | `booking/.../EmailController.java:29` | Replace with a `ConcurrentHashMap<email, otp>` or Redis with TTL |
-| 2 | **Destination dropdown is incomplete** — only 4 options are active in the React booking form; options 5–43 are commented out | `ticket/src/Componenets/Data.js:184-222` | Either restore all options or fetch station list dynamically from the API |
-| 3 | **SMTP credentials in source code** — Gmail username and App Password are committed in `application.properties` | `booking/.../application.properties:17-18` | Move to environment variables or Spring Cloud Config |
-| 4 | **`appsettings.json` key mismatch** — file uses key `"MetroDb"` but `Program.cs` reads `"metro"` | `appsettings.json:10` vs `Program.cs:13` | Align to one consistent key name |
-| 5 | **`Nullable` annotations disabled** — `<!-- <Nullable>enable</Nullable> -->` is commented out | `MyWebApp.csproj:7` | Enable to catch null-reference bugs at compile time |
-| 6 | **No OTP expiry** — OTP has no time-to-live; a generated OTP remains valid indefinitely until the server restarts | `OTPService.java` | Add a timestamp and reject OTPs older than 5 minutes |
 
 ---
 
