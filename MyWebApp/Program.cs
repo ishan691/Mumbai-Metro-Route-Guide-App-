@@ -10,7 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
-var connStr = builder.Configuration.GetConnectionString("metro");
+var connStr = builder.Configuration.GetConnectionString("metro")
+    ?? throw new InvalidOperationException("Connection string 'metro' not found.");
 
 // Official Oracle provider
 builder.Services.AddDbContext<SiteDbContext>(options => options.UseMySQL(connStr));
